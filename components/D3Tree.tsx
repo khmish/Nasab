@@ -151,6 +151,7 @@ const D3Tree: React.FC<D3TreeProps> = ({ data, rootId, onNodeClick, onAddRelativ
 
       // Generate HTML for the group
       fo.append("xhtml:div")
+        .attr("dir", dir) // Explicitly pass direction for flex behavior
         .style("width", "100%")
         .style("height", "100%")
         .style("display", "flex")
@@ -166,25 +167,27 @@ const D3Tree: React.FC<D3TreeProps> = ({ data, rootId, onNodeClick, onAddRelativ
                 : p.gender === 'male' ? 'bg-blue-50 border-blue-200' : 'bg-pink-50 border-pink-200';
             
             const avatarHtml = p.photoUrl 
-              ? `<img src="${p.photoUrl}" class="w-10 h-10 rounded-full object-cover border border-slate-200 mr-3 shadow-sm ${isDeceased ? 'grayscale' : ''}" />`
-              : `<div class="w-10 h-10 rounded-full flex items-center justify-center bg-white text-lg font-bold shadow-sm mr-3 text-slate-600 ${isDeceased ? 'grayscale' : ''}">${p.name.charAt(0)}</div>`;
+              ? `<img src="${p.photoUrl}" class="w-10 h-10 rounded-full object-cover border border-slate-200 ltr:mr-3 rtl:ml-3 shadow-sm ${isDeceased ? 'grayscale' : ''}" />`
+              : `<div class="w-10 h-10 rounded-full flex items-center justify-center bg-white text-lg font-bold shadow-sm ltr:mr-3 rtl:ml-3 text-slate-600 ${isDeceased ? 'grayscale' : ''}">${p.name.charAt(0)}</div>`;
 
             const dateText = isDeceased 
                 ? `<span class="text-xs text-gray-800 font-medium">${p.birthDate?.split('-')[0] || '?'} - ${p.deathDate?.split('-')[0] || '?'}</span>` 
                 : p.birthDate || 'Unknown';
 
-            // Badge for Deceased (Top Right)
+            // Badge for Deceased (Top End)
+            // LTR: Right, RTL: Left
             const deceasedBadge = isDeceased 
-                ? `<div class="absolute -top-2 -right-2 bg-gray-800 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-20 font-medium tracking-wide">RIP</div>`
+                ? `<div class="absolute -top-2 ltr:-right-2 rtl:-left-2 bg-gray-800 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-20 font-medium tracking-wide">RIP</div>`
                 : '';
 
-            // Badge for Lineage Type (Top Left)
+            // Badge for Lineage Type (Top Start)
+            // LTR: Left, RTL: Right
             // Main Person = Family (Bloodline) | Spouse = In-law (Outsider)
             const lineageBadge = !isSpouse
-                ? `<div class="absolute -top-3 -left-3 bg-white text-green-600 p-1.5 rounded-full border border-green-200 shadow-md z-20" title="Bloodline">
+                ? `<div class="absolute -top-3 ltr:-left-3 rtl:-right-3 bg-white text-green-600 p-1.5 rounded-full border border-green-200 shadow-md z-20" title="Bloodline">
                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10a6 6 0 0 0-6-6c-2 0-4 1-4 4.5 0 2 2.67 5.5 5.5 9.5Z"/><path d="M12 10a6 6 0 0 1 6-6c2 0 4 1 4 4.5 0 2-2.67 5.5-5.5 9.5Z"/><path d="M12 22v-8"/></svg>
                    </div>`
-                : `<div class="absolute -top-3 -left-3 bg-white text-purple-500 p-1.5 rounded-full border border-purple-200 shadow-md z-20" title="In-law">
+                : `<div class="absolute -top-3 ltr:-left-3 rtl:-right-3 bg-white text-purple-500 p-1.5 rounded-full border border-purple-200 shadow-md z-20" title="In-law">
                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"/></svg>
                    </div>`;
 
@@ -203,20 +206,21 @@ const D3Tree: React.FC<D3TreeProps> = ({ data, rootId, onNodeClick, onAddRelativ
             `;
 
             // Spouse Connector (Blue Line + Heart)
-            // Positioned absolutely to the left of the spouse card to bridge the gap
+            // LTR: Connector is to the Left of the Spouse (connecting to Main on the left)
+            // RTL: Connector is to the Right of the Spouse (connecting to Main on the right)
             const spouseConnector = isSpouse ? `
-              <div class="absolute top-1/2 -left-[40px] w-[40px] h-[3px] bg-blue-300 -translate-y-1/2 z-0"></div>
-              <div class="absolute top-1/2 -left-[20px] -mt-3 text-pink-500 text-xl z-10 flex justify-center w-[40px] -ml-[20px]">
+              <div class="absolute top-1/2 ltr:-left-[40px] rtl:-right-[40px] w-[40px] h-[3px] bg-blue-300 -translate-y-1/2 z-0"></div>
+              <div class="absolute top-1/2 ltr:-left-[20px] rtl:-right-[20px] -mt-3 text-pink-500 text-xl z-10 flex justify-center w-[40px] ltr:-ml-[20px] rtl:-mr-[20px]">
                  <div class="bg-white rounded-full p-0.5 shadow-sm border border-blue-100">♥</div>
               </div>
             ` : '';
 
             return `
-              <div class="relative flex-shrink-0 w-[${cardWidth}px] h-[${cardHeight}px] flex flex-col p-2 rounded-lg border shadow-sm ${genderColor} transition hover:shadow-md select-none bg-white">
+              <div class="relative flex-shrink-0 w-[${cardWidth}px] h-[${cardHeight}px] flex flex-col p-2 rounded-lg border shadow-sm ${genderColor} transition hover:shadow-md select-none bg-white text-start">
                 ${lineageBadge}
                 ${deceasedBadge}
                 ${spouseConnector}
-                <div class="flex items-center mb-1 cursor-pointer card-main-area flex-1 pl-2" data-id="${p.id}">
+                <div class="flex items-center mb-1 cursor-pointer card-main-area flex-1 ltr:pl-2 rtl:pr-2" data-id="${p.id}">
                   ${avatarHtml}
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-bold text-gray-900 truncate" title="${p.name}">${p.name}</p>
