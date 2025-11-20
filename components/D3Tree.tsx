@@ -97,15 +97,15 @@ const D3Tree: React.FC<D3TreeProps> = ({ data, rootId, onNodeClick, onAddRelativ
 
     // --- Rendering ---
 
-    // Links (Edges) - Thick Line for Direct Children
+    // Links (Edges) - Thick Line for Direct Children (Bloodline)
     g.selectAll(".link")
       .data(root.links())
       .enter()
       .append("path")
       .attr("class", "link")
       .attr("fill", "none")
-      .attr("stroke", "#475569") // Darker slate color
-      .attr("stroke-width", 4)   // Thicker line (4px)
+      .attr("stroke", "#334155") // Dark Slate 700
+      .attr("stroke-width", 4)   // Thick line
       .attr("d", (d: any) => {
         // Helper for standard bezier curve
         return `M${d.source.x},${d.source.y}
@@ -173,9 +173,20 @@ const D3Tree: React.FC<D3TreeProps> = ({ data, rootId, onNodeClick, onAddRelativ
                 ? `<span class="text-xs text-gray-800 font-medium">${p.birthDate?.split('-')[0] || '?'} - ${p.deathDate?.split('-')[0] || '?'}</span>` 
                 : p.birthDate || 'Unknown';
 
+            // Badge for Deceased (Top Right)
             const deceasedBadge = isDeceased 
-                ? `<div class="absolute -top-2 -right-2 bg-gray-800 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-10">RIP</div>`
+                ? `<div class="absolute -top-2 -right-2 bg-gray-800 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-20 font-medium tracking-wide">RIP</div>`
                 : '';
+
+            // Badge for Lineage Type (Top Left)
+            // Main Person = Family (Bloodline) | Spouse = In-law (Outsider)
+            const lineageBadge = !isSpouse
+                ? `<div class="absolute -top-3 -left-3 bg-white text-green-600 p-1.5 rounded-full border border-green-200 shadow-md z-20" title="Bloodline">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10a6 6 0 0 0-6-6c-2 0-4 1-4 4.5 0 2 2.67 5.5 5.5 9.5Z"/><path d="M12 10a6 6 0 0 1 6-6c2 0 4 1 4 4.5 0 2-2.67 5.5-5.5 9.5Z"/><path d="M12 22v-8"/></svg>
+                   </div>`
+                : `<div class="absolute -top-3 -left-3 bg-white text-purple-500 p-1.5 rounded-full border border-purple-200 shadow-md z-20" title="In-law">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"/></svg>
+                   </div>`;
 
             const buttonsHtml = `
               <div class="flex justify-between mt-2 pt-2 border-t border-slate-200/60 gap-1">
@@ -202,9 +213,10 @@ const D3Tree: React.FC<D3TreeProps> = ({ data, rootId, onNodeClick, onAddRelativ
 
             return `
               <div class="relative flex-shrink-0 w-[${cardWidth}px] h-[${cardHeight}px] flex flex-col p-2 rounded-lg border shadow-sm ${genderColor} transition hover:shadow-md select-none bg-white">
+                ${lineageBadge}
                 ${deceasedBadge}
                 ${spouseConnector}
-                <div class="flex items-center mb-1 cursor-pointer card-main-area flex-1" data-id="${p.id}">
+                <div class="flex items-center mb-1 cursor-pointer card-main-area flex-1 pl-2" data-id="${p.id}">
                   ${avatarHtml}
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-bold text-gray-900 truncate" title="${p.name}">${p.name}</p>
