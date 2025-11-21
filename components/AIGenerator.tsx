@@ -1,9 +1,9 @@
+
 import React, { useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { generateFamilyFromText } from '../services/geminiService';
 import { Loader2, Sparkles } from 'lucide-react';
 import { useFamily } from '../contexts/FamilyContext';
-import { Person } from '../types';
 
 const AIGenerator: React.FC = () => {
   const { t } = useLanguage();
@@ -19,17 +19,15 @@ const AIGenerator: React.FC = () => {
     try {
       const people = await generateFamilyFromText(prompt);
       
-      // Simple logic to merge generated people into context
-      // In a real app, this requires smarter merging and ID conflict resolution
-      people.forEach(p => {
-         // Assign new unique IDs to avoid conflict with existing mocks if needed
-         // For demo, we assume AI generates distinct IDs or we overwrite
-         addPerson(p);
-      });
+      // Use Promise.all to wait for all API calls to finish
+      await Promise.all(people.map(async (p) => {
+         await addPerson(p);
+      }));
 
       setPrompt('');
       alert(`Successfully imported ${people.length} family members!`);
     } catch (e) {
+      console.error(e);
       setError('Failed to generate family tree. Please check API Key or try again.');
     } finally {
       setLoading(false);

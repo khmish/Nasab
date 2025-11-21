@@ -9,14 +9,14 @@ import {
   Menu, 
   X, 
   Globe,
-  Plus
+  Plus,
+  Loader2
 } from 'lucide-react';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { FamilyProvider, useFamily } from './contexts/FamilyContext';
 import D3Tree from './components/D3Tree';
 import AIGenerator from './components/AIGenerator';
 import PersonModal from './components/PersonModal';
-import { TRANSLATIONS } from './constants';
 import { Person } from './types';
 
 // --- Sub-components for pages ---
@@ -64,7 +64,7 @@ const StatCard = ({ title, value, icon }: any) => (
 const TreeView = () => {
   const { t } = useLanguage();
   const { familyData, getPerson } = useFamily();
-  const [rootId, setRootId] = useState(familyData.rootId || Object.keys(familyData.people)[0]);
+  const [rootId, setRootId] = useState(familyData.rootId || (Object.keys(familyData.people).length > 0 ? Object.keys(familyData.people)[0] : ''));
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
@@ -107,15 +107,24 @@ const TreeView = () => {
         </div>
       </div>
       <div className="flex-1 bg-white rounded-xl shadow border border-slate-200 overflow-hidden relative">
-        {rootId && (
+        {rootId && familyData.people[rootId] ? (
           <D3Tree 
             data={familyData} 
             rootId={rootId} 
             onNodeClick={handleNodeClick} 
             onAddRelative={handleAddRelative}
           />
+        ) : (
+          <div className="p-10 text-center text-gray-500 h-full flex flex-col items-center justify-center">
+             <p className="mb-4">No family members found.</p>
+             <button 
+               onClick={() => { setEditingPerson(null); setIsModalOpen(true); }}
+               className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700"
+             >
+                Add First Person
+             </button>
+          </div>
         )}
-        {!rootId && <div className="p-10 text-center text-gray-500">No family members found. Add someone to get started.</div>}
       </div>
 
       <PersonModal 
@@ -144,9 +153,9 @@ const PeopleList = () => {
     setIsModalOpen(true);
   };
   
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
       if(window.confirm(t('delete') + '?')) {
-          deletePerson(id);
+          await deletePerson(id);
       }
   };
 
@@ -268,7 +277,19 @@ const SidebarItem = ({ to, icon, label }: any) => (
 
 const MainLayout = () => {
   const { t, language, setLanguage, dir } = useLanguage();
+  const { isLoading } = useFamily();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
+         <div className="flex flex-col items-center gap-3 text-brand-600">
+            <Loader2 className="animate-spin w-10 h-10" />
+            <span className="font-medium text-slate-600">Loading Nasab...</span>
+         </div>
+      </div>
+    )
+  }
 
   return (
     <div className={`flex h-screen bg-slate-50 ${language === 'ar' ? 'font-arabic' : 'font-sans'}`} dir={dir}>

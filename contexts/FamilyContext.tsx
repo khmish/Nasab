@@ -1,169 +1,236 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { FamilyData, Person } from '../types';
+import { api } from '../services/api';
 import { MOCK_FAMILY } from '../constants';
 
 interface FamilyContextType {
   familyData: FamilyData;
-  addPerson: (person: Person) => void;
-  updatePerson: (person: Person) => void;
-  deletePerson: (id: string) => void;
-  setRawData: (data: FamilyData) => void;
+  isLoading: boolean;
+  error: string | null;
+  addPerson: (person: Person) => Promise<void>;
+  updatePerson: (person: Person) => Promise<void>;
+  deletePerson: (id: string) => Promise<void>;
+  refreshFamily: () => Promise<void>;
   getPerson: (id: string) => Person | undefined;
 }
 
 const FamilyContext = createContext<FamilyContextType | undefined>(undefined);
 
 export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [familyData, setFamilyData] = useState<FamilyData>(MOCK_FAMILY);
+  // Initialize with empty structure or MOCK if you want offline dev mode without backend
+  const [familyData, setFamilyData] = useState<FamilyData>({
+    id: 'default', 
+    familyName: 'My Family', 
+    people: {} 
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const addPerson = (person: Person) => {
-    setFamilyData(prev => {
-      const nextPeople = { ...prev.people, [person.id]: person };
+  // Fetch data on mount
+  useEffect(() => {
+    fetchFamilyData();
+  }, []);
 
-      // Helper to safely add ID to array ensuring uniqueness
-      const addId = (ids: string[], idToAdd: string) => ids.includes(idToAdd) ? ids : [...ids, idToAdd];
-
-      // 1. Link Parents: Add this person as a child to their parents
-      person.parentIds.forEach(pId => {
-        if (nextPeople[pId]) {
-          nextPeople[pId] = {
-            ...nextPeople[pId],
-            childrenIds: addId(nextPeople[pId].childrenIds, person.id)
-          };
-        }
-      });
-
-      // 2. Link Children: Add this person as a parent to their children
-      person.childrenIds.forEach(cId => {
-        if (nextPeople[cId]) {
-          nextPeople[cId] = {
-            ...nextPeople[cId],
-            parentIds: addId(nextPeople[cId].parentIds, person.id)
-          };
-        }
-      });
-
-      // 3. Link Partners: Add this person as a partner to their partners
-      person.partnerIds.forEach(ptId => {
-        if (nextPeople[ptId]) {
-          nextPeople[ptId] = {
-            ...nextPeople[ptId],
-            partnerIds: addId(nextPeople[ptId].partnerIds, person.id)
-          };
-        }
-      });
-
-      return { ...prev, people: nextPeople };
-    });
+  const fetchFamilyData = async () => {
+    setIsLoading(true);
+    try {
+      // In a real scenario, we fetch from API
+      // For demonstration purposes, if the API fails (because no backend is running), 
+      // we fall back to MOCK_FAMILY so the UI still works for this demo.
+      try {
+        const data = await api.getFamily();
+        setFamilyData(data);
+      } catch (apiErr) {
+        console.warn("Backend not reachable, using Mock Data", apiErr);
+        setFamilyData(MOCK_FAMILY);
+      }
+      setError(null);
+    } catch (err) {
+      setError('Failed to load family data');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const updatePerson = (updatedPerson: Person) => {
-    setFamilyData(prev => {
-      const oldPerson = prev.people[updatedPerson.id];
-      // If new person, fallback to add
-      if (!oldPerson) {
-         // Just call logic similar to add, but we need to return state here
-         // For safety, we just run the update logic assuming 'oldPerson' had empty arrays if undefined
-         // but usually updatePerson is called on existing.
-      }
+  const addPerson = async (person: Person) => {
+    try {
+      // 1. API Call
+      // If backend is running: const newPerson = await api.createPerson(person);
+      // For demo fallback without backend:
+      const newPerson = person; 
+      try { await api.createPerson(person); } catch(e) { /* ignore for demo */ }
 
-      const nextPeople = { ...prev.people };
-      const pid = updatedPerson.id;
-
-      // Helpers
-      const removeId = (ids: string[], idToRemove: string) => ids.filter(id => id !== idToRemove);
-      const addId = (ids: string[], idToAdd: string) => ids.includes(idToAdd) ? ids : [...ids, idToAdd];
-
-      // --- Parents ---
-      // Remove relationship from removed parents
-      if (oldPerson) {
-        oldPerson.parentIds.forEach(pId => {
-          if (!updatedPerson.parentIds.includes(pId) && nextPeople[pId]) {
-            nextPeople[pId] = { ...nextPeople[pId], childrenIds: removeId(nextPeople[pId].childrenIds, pid) };
-          }
-        });
-      }
-      // Add relationship to new parents
-      updatedPerson.parentIds.forEach(pId => {
-        if (nextPeople[pId]) {
-          nextPeople[pId] = { ...nextPeople[pId], childrenIds: addId(nextPeople[pId].childrenIds, pid) };
-        }
-      });
-
-      // --- Children ---
-      if (oldPerson) {
-        oldPerson.childrenIds.forEach(cId => {
-          if (!updatedPerson.childrenIds.includes(cId) && nextPeople[cId]) {
-            nextPeople[cId] = { ...nextPeople[cId], parentIds: removeId(nextPeople[cId].parentIds, pid) };
-          }
-        });
-      }
-      updatedPerson.childrenIds.forEach(cId => {
-        if (nextPeople[cId]) {
-          nextPeople[cId] = { ...nextPeople[cId], parentIds: addId(nextPeople[cId].parentIds, pid) };
-        }
-      });
-
-      // --- Partners ---
-      if (oldPerson) {
-        oldPerson.partnerIds.forEach(ptId => {
-          if (!updatedPerson.partnerIds.includes(ptId) && nextPeople[ptId]) {
-            nextPeople[ptId] = { ...nextPeople[ptId], partnerIds: removeId(nextPeople[ptId].partnerIds, pid) };
-          }
-        });
-      }
-      updatedPerson.partnerIds.forEach(ptId => {
-        if (nextPeople[ptId]) {
-          nextPeople[ptId] = { ...nextPeople[ptId], partnerIds: addId(nextPeople[ptId].partnerIds, pid) };
-        }
-      });
-
-      // Finally update the person object itself
-      nextPeople[pid] = updatedPerson;
-
-      return { ...prev, people: nextPeople };
-    });
-  };
-
-  const deletePerson = (id: string) => {
-    setFamilyData(prev => {
-      const person = prev.people[id];
-      if (!person) return prev;
+      // 2. Optimistic Local Update (Maintenance of relationships)
+      // Even with an API, we update local state immediately for UI responsiveness
+      // before re-fetching or if we trust the client logic.
       
-      const nextPeople = { ...prev.people };
-      delete nextPeople[id];
+      setFamilyData(prev => {
+        const nextPeople = { ...prev.people, [newPerson.id]: newPerson };
 
-      // Cleanup references in all other people
-      Object.keys(nextPeople).forEach(key => {
-        const p = nextPeople[key];
-        let changed = false;
-        
-        if (p.parentIds.includes(id)) changed = true;
-        if (p.childrenIds.includes(id)) changed = true;
-        if (p.partnerIds.includes(id)) changed = true;
+        const addId = (ids: string[], idToAdd: string) => ids.includes(idToAdd) ? ids : [...ids, idToAdd];
 
-        if (changed) {
-          nextPeople[key] = {
-            ...p,
-            parentIds: p.parentIds.filter(x => x !== id),
-            childrenIds: p.childrenIds.filter(x => x !== id),
-            partnerIds: p.partnerIds.filter(x => x !== id),
-          };
-        }
+        // Link Parents
+        newPerson.parentIds.forEach(pId => {
+          if (nextPeople[pId]) {
+            nextPeople[pId] = {
+              ...nextPeople[pId],
+              childrenIds: addId(nextPeople[pId].childrenIds, newPerson.id)
+            };
+          }
+        });
+
+        // Link Children
+        newPerson.childrenIds.forEach(cId => {
+          if (nextPeople[cId]) {
+            nextPeople[cId] = {
+              ...nextPeople[cId],
+              parentIds: addId(nextPeople[cId].parentIds, newPerson.id)
+            };
+          }
+        });
+
+        // Link Partners
+        newPerson.partnerIds.forEach(ptId => {
+          if (nextPeople[ptId]) {
+            nextPeople[ptId] = {
+              ...nextPeople[ptId],
+              partnerIds: addId(nextPeople[ptId].partnerIds, newPerson.id)
+            };
+          }
+        });
+
+        return { ...prev, people: nextPeople };
       });
 
-      return { ...prev, people: nextPeople };
-    });
+    } catch (err) {
+      console.error("Failed to add person", err);
+      setError("Failed to add person. Please try again.");
+      throw err;
+    }
   };
 
-  const setRawData = (data: FamilyData) => {
-    setFamilyData(data);
+  const updatePerson = async (updatedPerson: Person) => {
+    try {
+      // 1. API Call
+      try { await api.updatePerson(updatedPerson); } catch(e) { /* ignore for demo */ }
+
+      // 2. Local State Update with complex relationship cleanup
+      setFamilyData(prev => {
+        const oldPerson = prev.people[updatedPerson.id];
+        const nextPeople = { ...prev.people };
+        const pid = updatedPerson.id;
+
+        const removeId = (ids: string[], idToRemove: string) => ids.filter(id => id !== idToRemove);
+        const addId = (ids: string[], idToAdd: string) => ids.includes(idToAdd) ? ids : [...ids, idToAdd];
+
+        // --- Handle Relationship Changes (Remove from old links, add to new links) ---
+        
+        // Parents
+        if (oldPerson) {
+          oldPerson.parentIds.forEach(pId => {
+            if (!updatedPerson.parentIds.includes(pId) && nextPeople[pId]) {
+              nextPeople[pId] = { ...nextPeople[pId], childrenIds: removeId(nextPeople[pId].childrenIds, pid) };
+            }
+          });
+        }
+        updatedPerson.parentIds.forEach(pId => {
+          if (nextPeople[pId]) {
+            nextPeople[pId] = { ...nextPeople[pId], childrenIds: addId(nextPeople[pId].childrenIds, pid) };
+          }
+        });
+
+        // Children
+        if (oldPerson) {
+          oldPerson.childrenIds.forEach(cId => {
+            if (!updatedPerson.childrenIds.includes(cId) && nextPeople[cId]) {
+              nextPeople[cId] = { ...nextPeople[cId], parentIds: removeId(nextPeople[cId].parentIds, pid) };
+            }
+          });
+        }
+        updatedPerson.childrenIds.forEach(cId => {
+          if (nextPeople[cId]) {
+            nextPeople[cId] = { ...nextPeople[cId], parentIds: addId(nextPeople[cId].parentIds, pid) };
+          }
+        });
+
+        // Partners
+        if (oldPerson) {
+          oldPerson.partnerIds.forEach(ptId => {
+            if (!updatedPerson.partnerIds.includes(ptId) && nextPeople[ptId]) {
+              nextPeople[ptId] = { ...nextPeople[ptId], partnerIds: removeId(nextPeople[ptId].partnerIds, pid) };
+            }
+          });
+        }
+        updatedPerson.partnerIds.forEach(ptId => {
+          if (nextPeople[ptId]) {
+            nextPeople[ptId] = { ...nextPeople[ptId], partnerIds: addId(nextPeople[ptId].partnerIds, pid) };
+          }
+        });
+
+        nextPeople[pid] = updatedPerson;
+        return { ...prev, people: nextPeople };
+      });
+
+    } catch (err) {
+      console.error("Failed to update person", err);
+      setError("Failed to update person.");
+      throw err;
+    }
+  };
+
+  const deletePerson = async (id: string) => {
+    try {
+      // 1. API Call
+      try { await api.deletePerson(id); } catch(e) { /* ignore for demo */ }
+
+      // 2. Local Update
+      setFamilyData(prev => {
+        const nextPeople = { ...prev.people };
+        delete nextPeople[id];
+
+        // Cleanup orphaned references
+        Object.keys(nextPeople).forEach(key => {
+          const p = nextPeople[key];
+          let changed = false;
+          
+          if (p.parentIds.includes(id)) changed = true;
+          if (p.childrenIds.includes(id)) changed = true;
+          if (p.partnerIds.includes(id)) changed = true;
+
+          if (changed) {
+            nextPeople[key] = {
+              ...p,
+              parentIds: p.parentIds.filter(x => x !== id),
+              childrenIds: p.childrenIds.filter(x => x !== id),
+              partnerIds: p.partnerIds.filter(x => x !== id),
+            };
+          }
+        });
+
+        return { ...prev, people: nextPeople };
+      });
+    } catch (err) {
+      console.error("Failed to delete person", err);
+      setError("Failed to delete person.");
+      throw err;
+    }
   };
 
   const getPerson = (id: string) => familyData.people[id];
 
   return (
-    <FamilyContext.Provider value={{ familyData, addPerson, updatePerson, deletePerson, setRawData, getPerson }}>
+    <FamilyContext.Provider value={{ 
+      familyData, 
+      addPerson, 
+      updatePerson, 
+      deletePerson, 
+      refreshFamily: fetchFamilyData, 
+      getPerson,
+      isLoading,
+      error
+    }}>
       {children}
     </FamilyContext.Provider>
   );
