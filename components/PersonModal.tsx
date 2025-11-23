@@ -214,7 +214,7 @@ const PersonModal: React.FC<PersonModalProps> = ({ isOpen, onClose, personToEdit
   const [childrenIds, setChildrenIds] = useState<string[]>([]);
   const [partnerIds, setPartnerIds] = useState<string[]>([]);
 
-  const allPeople = Object.values(familyData.people).filter(p => 
+  const allPeople = (Object.values(familyData.people) as Person[]).filter(p => 
     !personToEdit || p.id !== personToEdit.id
   );
 
