@@ -1,0 +1,46 @@
+{
+  "name": "nasab-family-tree",
+  "version": "1.0.0",
+  "description": "MCP configuration for Nasab family tree management application",
+  "servers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "description": "Stores and retrieves family tree data, relationships, and genealogical information"
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "description": "Enhances AI reasoning for complex family relationship analysis and lineage tracing"
+    },
+    "mysql": {
+      "command": "npx",
+      "args": ["-y", "@xingyuchen/mysql-mcp-server"],
+      "description": "Provides persistent database storage for family members, relationships, and media",
+      "environment": {
+        "MYSQL_HOST": "${MYSQL_HOST:-localhost}",
+        "MYSQL_PORT": "${MYSQL_PORT:-3306}",
+        "MYSQL_USER": "${MYSQL_USER:-root}",
+        "MYSQL_PASSWORD": "${MYSQL_PASSWORD:-}",
+        "MYSQL_DATABASE": "${MYSQL_DATABASE:-nasab_family}"
+      }
+    }
+  },
+  "usage": {
+    "memory": [
+      "Store family member profiles and biographical data",
+      "Maintain relationship mappings between family members",
+      "Cache family tree calculations and genealogical paths"
+    ],
+    "sequential-thinking": [
+      "Analyze complex family relationships and lineage",
+      "Generate comprehensive family histories and narratives",
+      "Resolve conflicting genealogical information"
+    ],
+    "mysql": [
+      "Persistent storage of family member data",
+      "Complex querying of family relationships",
+      "Media file management for photos and documents"
+    ]
+  }
+}
